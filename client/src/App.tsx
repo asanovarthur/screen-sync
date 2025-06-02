@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { generateUuid } from "./utils";
 import { WebsocketServerMessageType } from "./enums";
 import { STREAM_SETTINGS, STUN_SERVER_URL, WEBSOCKET_URL } from "./constants";
@@ -17,10 +17,6 @@ export const App = () => {
   const viewerPeerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // TODO: изменить "any" на корректный тип
-  // const [peerConnections, setPeerConnections] = useState<any>({});
-
-  // TODO: изменить "any" на корректный тип
   let iceCandidateQueue: any[] = [];
   let peerConnections: any = {};
 
@@ -42,15 +38,13 @@ export const App = () => {
       const viewerPeerConnection = viewerPeerConnectionRef.current;
       const stream = streamRef.current;
 
-      const msg = JSON.parse(event.data);
+      const message = JSON.parse(event.data);
 
-      switch (msg.type) {
+      switch (message.type) {
         case WebsocketServerMessageType.viewerRequest:
           const newPeerConnection = new RTCPeerConnection({
             iceServers: [{ urls: STUN_SERVER_URL }],
           });
-
-          console.log(stream);
 
           stream?.getTracks().forEach((track) => {
             newPeerConnection?.addTrack(track, stream);
@@ -58,26 +52,20 @@ export const App = () => {
 
           const offer = await newPeerConnection?.createOffer();
           await newPeerConnection?.setLocalDescription(offer);
-          console.log("получили viewerRequest");
+
           socket?.send(
             JSON.stringify({
               type: WebsocketServerMessageType.offer,
               offer,
-              target: msg.sender,
+              target: message.sender,
               sender: roomId,
             })
           );
 
-          // TODO: изменить "any" на корректный тип
-          peerConnections[msg.sender] = newPeerConnection;
-
-          newPeerConnection.oniceconnectionstatechange = () => {
-            console.log("ICE state:", newPeerConnection.iceConnectionState); // Должно быть "connected" или "completed"
-          };
+          peerConnections[message.sender] = newPeerConnection;
 
           newPeerConnection.onicecandidate = (event) => {
             if (event.candidate) {
-              // кандидатов нужно всем отправлять?
               socket?.send(
                 JSON.stringify({
                   type: WebsocketServerMessageType.iceCandidate,
@@ -88,18 +76,14 @@ export const App = () => {
           };
           return;
         case WebsocketServerMessageType.offer:
-          console.log(!!viewerPeerConnection);
-          console.log(viewerPeerConnection);
-          await viewerPeerConnection?.setRemoteDescription(msg.offer);
+          await viewerPeerConnection?.setRemoteDescription(message.offer);
           const answer = await viewerPeerConnection?.createAnswer();
-          console.log(answer);
           await viewerPeerConnection?.setLocalDescription(answer);
-          console.log("получили offer");
           socket?.send(
             JSON.stringify({
               type: WebsocketServerMessageType.answer,
               answer,
-              target: msg.sender,
+              target: message.sender,
               sender: roomId,
             })
           );
@@ -107,17 +91,17 @@ export const App = () => {
         case WebsocketServerMessageType.iceCandidate:
           if (viewerPeerConnection) {
             viewerPeerConnection
-              .addIceCandidate(msg.candidate)
+              .addIceCandidate(message.candidate)
               .catch((e: any) => console.error(e));
           } else {
-            iceCandidateQueue.push(msg.candidate);
+            iceCandidateQueue.push(message.candidate);
           }
           return;
         case WebsocketServerMessageType.answer:
-          const peerConnection = peerConnections[msg.sender];
-          console.log(peerConnection);
+          const peerConnection = peerConnections[message.sender];
+
           if (peerConnection?.signalingState === "have-local-offer") {
-            const answer = new RTCSessionDescription(msg.answer);
+            const answer = new RTCSessionDescription(message.answer);
             await peerConnection?.setRemoteDescription(answer);
 
             iceCandidateQueue.forEach((candidate) => {
@@ -158,10 +142,6 @@ export const App = () => {
     });
 
     viewerPeerConnectionRef.current = newPeerConnection;
-
-    newPeerConnection.oniceconnectionstatechange = () => {
-      console.log("ICE state:", newPeerConnection.iceConnectionState); // Должно быть "connected" или "completed"
-    };
 
     newPeerConnection.onicecandidate = (event) => {
       if (event.candidate) {
@@ -237,7 +217,6 @@ export const App = () => {
         </>
       )}
 
-      {/* TODO: Сделать так, чтобы полученное видео отображалось только у зрителя */}
       {!!remoteStream && (
         <>
           <div>Полученное видео:</div>
