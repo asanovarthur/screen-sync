@@ -2,6 +2,7 @@ const WebSocket = require("ws");
 const PORT = 8080;
 const server = new WebSocket.Server({ port: PORT });
 
+console.clear();
 console.log(`Started Websocket server on port ${PORT}`);
 
 const clients = new Map();
@@ -25,6 +26,8 @@ const target = (message) => {
 };
 
 server.on("connection", (ws) => {
+  ws.removeAllListeners("message");
+
   const handleMessage = (data) => {
     const message = JSON.parse(data);
     switch (message.type) {

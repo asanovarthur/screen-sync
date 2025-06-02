@@ -3,6 +3,7 @@ import { generateUuid } from "./utils";
 import { WebsocketServerMessageType } from "./enums";
 import { STREAM_SETTINGS, STUN_SERVER_URL, WEBSOCKET_URL } from "./constants";
 import styles from "./App.module.scss";
+import { useWebRTCStats } from "./hooks/useWebRTCStats";
 
 export const App = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -16,6 +17,8 @@ export const App = () => {
 
   const viewerPeerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  const { fps, ping } = useWebRTCStats(viewerPeerConnectionRef.current);
 
   let iceCandidateQueue: any[] = [];
   let peerConnections: any = {};
@@ -227,6 +230,13 @@ export const App = () => {
             playsInline
             className={styles.video}
           />
+          <div className={styles["stats-grid"]}>
+            <div style={{ fontWeight: "bold" }}>FPS:</div>
+            <div>{fps === undefined ? "N/A" : fps}</div>
+
+            <div style={{ fontWeight: "bold" }}>Ping:</div>
+            <div>{ping === undefined ? "N/A" : `${ping}мс`}</div>
+          </div>
         </>
       )}
     </div>
