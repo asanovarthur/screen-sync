@@ -1,0 +1,12 @@
+.container {
+  display: flex;
+  height: 100vh;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 200px;
+  gap: 20px;
+}
+
+.video {
+  width: 720px;
+}
